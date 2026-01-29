@@ -1,0 +1,74 @@
+import { Module } from '@nestjs/common';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { CacheModule } from '@nestjs/cache-manager';
+import * as redisStore from 'cache-manager-redis-store';
+import { RadioModule } from './radio/radio.module';
+import { PodcastModule } from './podcast/podcast.module';
+import databaseConfig from './config/database.config';
+import redisConfig from './config/redis.config';
+import podcastConfig from './config/podcast.config';
+import radioConfig from './config/radio.config';
+
+@Module({
+  imports: [
+    // Global configuration
+    ConfigModule.forRoot({
+      isGlobal: true,
+      load: [databaseConfig, redisConfig, podcastConfig, radioConfig],
+    }),
+
+    // Database connection (PostgreSQL)
+    TypeOrmModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => {
+        const url = configService.get<string>('database.url');
+        const ssl = configService.get('database.ssl');
+        // If url is present, use url/ssl (Neon, DATABASE_URL), else use legacy fields
+        if (url) {
+          return {
+            type: 'postgres',
+            url,
+            ssl,
+            entities: configService.get('database.entities'),
+            synchronize: configService.get('database.synchronize'),
+            logging: configService.get('database.logging'),
+            retryAttempts: configService.get('database.retryAttempts') || 5,
+            retryDelay: configService.get('database.retryDelay') || 3000,
+          };
+        }
+        return {
+          type: 'postgres',
+          host: configService.get('database.host'),
+          port: configService.get('database.port'),
+          username: configService.get('database.username'),
+          password: configService.get('database.password'),
+          database: configService.get('database.database'),
+          entities: configService.get('database.entities'),
+          synchronize: configService.get('database.synchronize'),
+          logging: configService.get('database.logging'),
+          retryAttempts: configService.get('database.retryAttempts') || 5,
+          retryDelay: configService.get('database.retryDelay') || 3000,
+        };
+      },
+    }),
+
+    // Redis cache
+    CacheModule.registerAsync({
+      isGlobal: true,
+      inject: [ConfigService],
+      useFactory: async (configService: ConfigService) => ({
+        store: redisStore,
+        host: configService.get('redis.host'),
+        port: configService.get('redis.port'),
+        ttl: configService.get('redis.ttl'),
+      }),
+    }),
+
+    // Feature modules
+    RadioModule,
+    PodcastModule,
+    // TODO Phase 2: Add UserModule (auth, favorites)
+  ],
+})
+export class AppModule {}

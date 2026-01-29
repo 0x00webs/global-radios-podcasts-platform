@@ -1,0 +1,46 @@
+version: '3.8'
+
+# Database services for development
+# Start with: docker-compose -f docker-compose.db.yml up -d
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:14-alpine
+    container_name: radio-platform-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: radio_platform
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - radio-platform
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: radio-platform-redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - radio-platform
+
+volumes:
+  postgres_data:
+
+networks:
+  radio-platform:
+    driver: bridge

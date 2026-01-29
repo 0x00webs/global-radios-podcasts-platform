@@ -1,0 +1,56 @@
+import { Entity, Column, PrimaryColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+
+/**
+ * RadioStation entity - stores cached radio station metadata from Radio Browser API
+ * Important: We do NOT store or proxy audio streams, only metadata
+ */
+@Entity('radio_stations')
+export class RadioStation {
+  @PrimaryColumn({ type: 'uuid' })
+  id: string; // Using Radio Browser's stationuuid
+
+  @Column()
+  name: string;
+
+  @Column({ nullable: true })
+  url: string; // Homepage URL
+
+  @Column({ name: 'stream_url' })
+  streamUrl: string; // Direct stream URL - client connects to this
+
+  @Column({ nullable: true })
+  country: string;
+
+  @Column({ nullable: true })
+  countrycode: string;
+
+  @Column({ nullable: true })
+  state: string;
+
+  @Column({ nullable: true })
+  language: string;
+
+  @Column({ type: 'simple-array', nullable: true })
+  tags: string[]; // Genres/categories
+
+  @Column({ nullable: true })
+  favicon: string; // Station logo URL
+
+  @Column({ type: 'int', default: 0 })
+  bitrate: number;
+
+  @Column({ nullable: true })
+  codec: string;
+
+  @Column({ type: 'int', default: 0 })
+  votes: number; // Popularity from Radio Browser
+
+  @Column({ default: false })
+  ssl: boolean; // HTTPS stream support
+
+  @CreateDateColumn({ name: 'cached_at' })
+  cachedAt: Date;
+
+  @UpdateDateColumn({ name: 'updated_at' })
+  updatedAt: Date;
+}

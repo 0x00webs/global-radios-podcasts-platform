@@ -1,0 +1,134 @@
+import { Injectable, Logger, HttpException, HttpStatus } from '@nestjs/common';
+import axios, { AxiosInstance } from 'axios';
+
+/**
+ * Service to interact with Radio Browser API
+ * Radio Browser API is a community-driven open database of radio stations
+ * API Documentation: https://api.radio-browser.info/
+ */
+@Injectable()
+export class RadioBrowserService {
+  private readonly logger = new Logger(RadioBrowserService.name);
+  private readonly baseUrls: string[];
+  private currentBaseUrl: string;
+
+  constructor() {
+    const envBase = process.env.RADIO_BROWSER_API_URL;
+    this.baseUrls = [
+      envBase || 'https://de1.api.radio-browser.info',
+      'https://nl1.api.radio-browser.info',
+      'https://at1.api.radio-browser.info',
+      'https://fr1.api.radio-browser.info',
+    ];
+    this.currentBaseUrl = this.baseUrls[0];
+  }
+
+  private createAxios(baseURL: string): AxiosInstance {
+    return axios.create({
+      baseURL,
+      timeout: 10000,
+      headers: {
+        'User-Agent': 'RadioPlatform/1.0', // Required by Radio Browser API
+      },
+    });
+  }
+
+  /**
+   * Try multiple Radio Browser hosts to avoid outages/geo issues.
+   */
+  private async requestWithFallback<T>(endpoint: string, params?: Record<string, any>): Promise<T> {
+    const errors: Array<string> = [];
+
+    for (const base of this.baseUrls) {
+      try {
+        const client = this.createAxios(base);
+        const response = await client.get<T>(endpoint, { params });
+        if (this.currentBaseUrl !== base) {
+          this.logger.warn(`Switching Radio Browser base to ${base}`);
+          this.currentBaseUrl = base;
+        }
+        return response.data as T;
+      } catch (error) {
+        const message = (error as any)?.message || 'Unknown error';
+        errors.push(`${base}${endpoint}: ${message}`);
+        this.logger.warn(`Radio Browser host failed ${base}${endpoint}: ${message}`);
+        continue;
+      }
+    }
+
+    this.logger.error('All Radio Browser hosts failed', errors.join(' | '));
+    throw new HttpException(
+      'Failed to fetch radio data from Radio Browser',
+      HttpStatus.SERVICE_UNAVAILABLE,
+    );
+  }
+
+  /**
+   * Fetch stations with optional filters
+   * Returns raw data from Radio Browser API
+   */
+  async fetchStations(params: {
+    limit?: number;
+    offset?: number;
+    name?: string;
+    country?: string;
+    language?: string;
+    tag?: string;
+    order?: string;
+  }): Promise<any[]> {
+    const queryParams: any = {
+      limit: params.limit || 20,
+      offset: params.offset || 0,
+      order: params.order || 'votes', // Sort by popularity by default
+      reverse: 'true', // Most popular first
+    };
+
+    // Add optional filters
+    if (params.name) queryParams.name = params.name;
+    if (params.country) queryParams.country = params.country;
+    if (params.language) queryParams.language = params.language;
+    if (params.tag) queryParams.tag = params.tag;
+
+    const endpoint = '/json/stations/search';
+    this.logger.debug(`Fetching stations from Radio Browser: ${endpoint}`, queryParams);
+
+    return this.requestWithFallback<any[]>(endpoint, queryParams);
+  }
+
+  /**
+   * Get list of ALL countries with at least one station
+   * Radio Browser API returns the complete list of countries with stations
+   * This includes all countries worldwide, including Kenya, Nigeria, etc.
+   */
+  async fetchCountries(): Promise<any[]> {
+    const endpoint = '/json/countries';
+    const data = await this.requestWithFallback<any[]>(endpoint);
+    // Filter only countries with at least 1 station
+    const filteredCountries = data.filter((c: any) => c.stationcount > 0);
+    this.logger.debug(`Fetched ${filteredCountries.length} countries from Radio Browser API`);
+    return filteredCountries;
+  }
+
+  /**
+   * Get list of tags (genres) with station counts
+   * Returns top genres, sorted by station count (most popular first)
+   */
+  async fetchTags(): Promise<any[]> {
+    const endpoint = '/json/tags';
+    const data = await this.requestWithFallback<any[]>(endpoint, {
+      limit: 200,
+      order: 'stationcount',
+      reverse: 'true',
+    });
+    return data.filter((t: any) => t.stationcount > 0);
+  }
+
+  /**
+   * Get station by UUID
+   */
+  async fetchStationById(uuid: string): Promise<any> {
+    const endpoint = `/json/stations/byuuid/${uuid}`;
+    const data = await this.requestWithFallback<any[]>(endpoint);
+    return data[0];
+  }
+}
