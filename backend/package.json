@@ -7,7 +7,7 @@
   "scripts": {
     "build": "tsc",
     "start": "node dist/main.js",
-    "start:dev": "nodemon --watch src --exec ts-node src/main.ts",
+    "dev": "nodemon --watch src --exec ts-node src/main.ts",
     "lint": "echo 'Linting not configured yet'",
     "test": "echo 'Tests not configured yet'"
   },

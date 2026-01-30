@@ -1,18 +1,18 @@
-import { Injectable, Logger, Inject } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Inject, Injectable, Logger } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
 import { Cache } from 'cache-manager';
+import { Repository } from 'typeorm';
+import { PaginationDto, SearchQueryDto } from '../common/dto/pagination.dto';
+import {
+  CountryDto,
+  PaginatedResponseDto,
+  RadioStationDto,
+  TagDto,
+} from './dto/radio-station.dto';
 import { RadioStation } from './entities/radio-station.entity';
 import { RadioBrowserService } from './radio-browser.service';
 import { RadioSearchManager } from './radio-search.manager';
-import {
-  RadioStationDto,
-  PaginatedResponseDto,
-  CountryDto,
-  TagDto,
-} from './dto/radio-station.dto';
-import { SearchQueryDto, PaginationDto } from '../common/dto/pagination.dto';
 import { ProviderRadioResult } from './types/radio-search.types';
 
 /**
@@ -32,7 +32,7 @@ export class RadioService {
     private readonly radioBrowserService: RadioBrowserService,
     private readonly radioSearchManager: RadioSearchManager,
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
-  ) {}
+  ) { }
 
   /**
    * Get paginated list of radio stations using multi-provider search
@@ -41,27 +41,40 @@ export class RadioService {
     paginationDto: PaginationDto,
   ): Promise<PaginatedResponseDto<RadioStationDto>> {
     const { page = 1, limit = 20 } = paginationDto;
+    const offset = (page - 1) * limit;
 
-    // Use multi-provider search with no filters to get all stations
-    const searchDto = {
-      page,
-      limit,
-      query: undefined, // No search query means get all
-      country: undefined,
-      language: undefined,
-      tag: undefined,
-    };
+    // For the top-level stations listing (no filters) prefer Radio Browser's
+    // 'popular' endpoint which reliably returns a global list of stations.
+    // If Radio Browser is unreachable, fall back to the multi-provider search
+    // manager to avoid returning an empty list.
+    let savedStations: RadioStation[] = [];
+    try {
+      const rawStations = await this.radioBrowserService.fetchStations({ limit, offset });
+      savedStations = await this.saveStations(rawStations);
+    } catch (error) {
+      this.logger.warn('Radio Browser fetch failed, falling back to multi-provider search', error?.message || error);
+      // Fallback: multi-provider search with no filters
+      const searchDto = {
+        page,
+        limit,
+        query: undefined,
+        country: undefined,
+        language: undefined,
+        tag: undefined,
+      };
+      const providerResults = await this.radioSearchManager.search(searchDto);
+      savedStations = await this.saveProviderStations(providerResults);
+    }
 
-    const stations = await this.radioSearchManager.search(searchDto);
-    const savedStations = await this.saveProviderStations(stations);
+    const total = savedStations.length;
 
     const response: PaginatedResponseDto<RadioStationDto> = {
       data: savedStations.map(this.toDto),
       meta: {
-        total: savedStations.length,
+        total,
         page,
         limit,
-        totalPages: savedStations.length === limit ? page + 1 : page,
+        totalPages: Math.max(1, Math.ceil(total / limit)),
       },
     };
 

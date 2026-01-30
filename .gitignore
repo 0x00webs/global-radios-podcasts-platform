@@ -31,3 +31,4 @@ Thumbs.db
 *.tmp
 .tmp/
 .github/*.md
+backend/.env.prod

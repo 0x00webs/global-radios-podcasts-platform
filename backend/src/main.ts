@@ -1,5 +1,5 @@
-import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
+import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './common/filters/http-exception.filter';
 
@@ -28,15 +28,39 @@ export async function bootstrap(serverless = false) {
   // Global exception filter
   app.useGlobalFilters(new AllExceptionsFilter());
 
-  // Allow CORS for frontend deployment only
+  // Configure CORS using CORS_ORIGIN env var (supports comma-separated values and '*' wildcards)
+  const rawCors = process.env.CORS_ORIGIN;
+  const parseOrigins = (raw?: string) => {
+    // Default to the single production origin if nothing provided
+    if (!raw) return ['https://global-radio-podcast.vercel.app'];
+
+    const escape = (str: string) => str.replace(/[.+?^${}()|[\]\\]/g, '\\$&');
+
+    return raw
+      .split(',')
+      .map(s => s.trim())
+      .filter(Boolean)
+      .map(s => {
+        if (s.includes('*')) {
+          // Convert shell-like '*' to '.*' in a safe way
+          const pattern = s.split('*').map(escape).join('.*');
+          return new RegExp(`^${pattern}$`);
+        }
+        return s;
+      });
+  };
+
+  const corsOrigins = parseOrigins(rawCors);
+
   app.enableCors({
-    origin: ['https://global-radio-podcast.vercel.app'],
+    origin: corsOrigins,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
   });
 
-  console.log(`✅ CORS configured for origins: [https://global-radio-podcast.vercel.app]`);
+  const originLog = corsOrigins.map(o => (o instanceof RegExp ? o.toString() : o)).join(', ');
+  console.log(`✅ CORS configured for origins: [${originLog}]`);
 
   // Start server
   const port = process.env.PORT || 3000;

@@ -1,18 +1,18 @@
-import axios from 'axios';
-import type { AxiosInstance } from 'axios';
-import type {
-  RadioStation,
-  PaginatedResponse,
-  Country,
-  Tag,
-  SearchParams,
-} from '@/modules/radio/types/radio.types';
 import type { Podcast, PodcastEpisode, PodcastSearchParams, ProviderStatus } from '@/modules/podcast/types/podcast.types';
+import type {
+  Country,
+  PaginatedResponse,
+  RadioStation,
+  SearchParams,
+  Tag,
+} from '@/modules/radio/types/radio.types';
+import type { AxiosInstance } from 'axios';
+import axios from 'axios';
 
 /**
  * API Service for communicating with backend
  * All endpoints use the /api/v1 prefix
- * 
+ *
  * Supports multi-provider podcast search with intelligent deduplication
  */
 class ApiService {
@@ -20,27 +20,15 @@ class ApiService {
   private baseURL: string;
 
   constructor() {
-    // In development, Vite will proxy /api requests to the backend
-    // In production, use environment variable or construct from current window location
-    let apiURL = import.meta.env.VITE_API_URL;
-    
-    if (!apiURL) {
-      // Check if we're in development mode with Vite proxy
-      if (import.meta.env.DEV) {
-        // Use relative URL - Vite will proxy to backend via /api route
-        apiURL = '/api/v1';
-      } else {
-        // Production: Force use of the Vercel backend URL
-        apiURL = 'https://global-radio-podcast-api.vercel.app/api/v1';
-      }
-    }
-    
-    this.baseURL = import.meta.env.VITE_API_URL;
-    
+    // Use the full API URL from VITE_API_URL (include any path/prefix like /api/v1).
+    // Falls back to the current origin with /api/v1 only if env var is not present.
+    const apiURL = import.meta.env.VITE_API_URL || `${window.location.origin}/api/v1`;
+    this.baseURL = apiURL;
+
     // Log the API URL being used (helpful for debugging)
     console.log('[API Service] Using API URL:', this.baseURL);
     console.log('[API Service] Development mode:', import.meta.env.DEV);
-    
+
     this.axiosInstance = axios.create({
       baseURL: this.baseURL,
       timeout: 15000,
@@ -86,14 +74,14 @@ class ApiService {
    */
   async searchStations(params: SearchParams): Promise<PaginatedResponse<RadioStation>> {
     console.log(`[API Service] Searching stations with params:`, params);
-    
+
     // Convert providers array to comma-separated string if provided
     const requestParams = {
       ...params,
       limit: params.limit || 100, // Increase default limit for multi-provider
       providers: params.providers?.length ? params.providers.join(',') : undefined,
     };
-    
+
     const response = await this.axiosInstance.get<PaginatedResponse<RadioStation>>(
       '/radio/search',
       { params: requestParams }
@@ -140,9 +128,9 @@ class ApiService {
         ...params,
         providers: params.providers?.length ? params.providers.join(',') : undefined,
       };
-      
+
       console.log('[API Service] Podcast search params:', requestParams);
-      
+
       const response = await this.axiosInstance.get<Podcast[]>(
         '/podcasts/search',
         { params: requestParams }

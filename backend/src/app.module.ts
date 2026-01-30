@@ -1,14 +1,14 @@
+import { CacheModule } from '@nestjs/cache-manager';
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { CacheModule } from '@nestjs/cache-manager';
 import * as redisStore from 'cache-manager-redis-store';
-import { RadioModule } from './radio/radio.module';
-import { PodcastModule } from './podcast/podcast.module';
 import databaseConfig from './config/database.config';
-import redisConfig from './config/redis.config';
 import podcastConfig from './config/podcast.config';
 import radioConfig from './config/radio.config';
+import redisConfig from './config/redis.config';
+import { PodcastModule } from './podcast/podcast.module';
+import { RadioModule } from './radio/radio.module';
 
 @Module({
   imports: [
@@ -59,9 +59,12 @@ import radioConfig from './config/radio.config';
       inject: [ConfigService],
       useFactory: async (configService: ConfigService) => ({
         store: redisStore,
+        // Support a full URL (host:port with optional auth) or fallback to host/port
+        url: configService.get('redis.url') || undefined,
         host: configService.get('redis.host'),
         port: configService.get('redis.port'),
         ttl: configService.get('redis.ttl'),
+        password: configService.get('redis.password') || undefined,
       }),
     }),
 
@@ -71,4 +74,4 @@ import radioConfig from './config/radio.config';
     // TODO Phase 2: Add UserModule (auth, favorites)
   ],
 })
-export class AppModule {}
+export class AppModule { }

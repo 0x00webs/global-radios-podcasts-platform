@@ -10,17 +10,10 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  // Note: Proxy removed — frontend expects a full backend URL in VITE_API_URL (e.g. http://localhost:3000/api/v1)
   server: {
     host: '0.0.0.0',
     port: 5000,
     allowedHosts: true,
-    proxy: {
-      '/api': {
-        target: process.env.VITE_API_URL,
-        changeOrigin: true,
-        // Optionally, rewrite the path if needed
-        // rewrite: (path) => path.replace(/^\/api/, ''),
-      },
-    },
   },
 })

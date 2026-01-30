@@ -1,21 +1,21 @@
 # Database services for development
-# Start with: docker-compose -f docker-compose.db.yml up -d
+# Start with: docker-compose -f docker-compose.yml up -d
 
 services:
   # PostgreSQL Database
   postgres:
-    image: postgres:14-alpine
+    image: postgres:17-alpine
     container_name: radio-platform-postgres
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: radio_platform
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_DATABASE}
     ports:
-      - "5432:5432"
+      - "${DB_PORT}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -24,12 +24,15 @@ services:
 
   # Redis Cache
   redis:
-    image: redis:7-alpine
+    image: redis:8-alpine
     container_name: radio-platform-redis
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+    command: ["sh", "-c", "redis-server --requirepass \"$REDIS_PASSWORD\""]
     ports:
-      - "6379:6379"
+      - "${REDIS_PORT}:6379"
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD", "sh", "-c", "redis-cli -a \"$REDIS_PASSWORD\" ping"]
       interval: 10s
       timeout: 3s
       retries: 5
