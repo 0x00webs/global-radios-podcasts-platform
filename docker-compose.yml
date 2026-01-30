@@ -1,5 +1,3 @@
-version: '3.8'
-
 # For running everything in containers
 # Note: Use docker-compose.db.yml for just database services
 # This file is for when you want to run the entire stack including backend in Docker

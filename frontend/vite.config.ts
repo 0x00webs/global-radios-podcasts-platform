@@ -1,6 +1,6 @@
-import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'path'
+import { defineConfig } from 'vite'
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -16,7 +16,7 @@ export default defineConfig({
     allowedHosts: true,
     proxy: {
       '/api': {
-        target: process.env.BACKEND_URL || 'https://global-radio-podcast-api.vercel.app',
+        target: process.env.VITE_API_URL,
         changeOrigin: true,
         // Optionally, rewrite the path if needed
         // rewrite: (path) => path.replace(/^\/api/, ''),

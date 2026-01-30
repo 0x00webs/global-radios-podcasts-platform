@@ -15,14 +15,14 @@ if ! command -v docker &> /dev/null; then
 fi
 
 # Check if Docker Compose is installed
-if ! command -v docker-compose &> /dev/null && ! docker compose version &> /dev/null; then
+if ! command -v docker compose &> /dev/null && ! docker compose version &> /dev/null; then
     echo "❌ Docker Compose is not installed. Please install Docker Compose first."
     exit 1
 fi
 
 # Start database services
 echo "📦 Starting PostgreSQL and Redis..."
-docker-compose -f docker-compose.db.yml up -d
+docker compose -f docker-compose.db.yml up -d
 
 # Wait for services to be healthy
 echo "⏳ Waiting for databases to be ready..."
@@ -31,13 +31,13 @@ sleep 10
 # Check if backend dependencies are installed
 if [ ! -d "backend/node_modules" ]; then
     echo "📦 Installing backend dependencies..."
-    cd backend && npm install && cd ..
+    cd backend && bun install && cd ..
 fi
 
 # Check if frontend dependencies are installed
 if [ ! -d "frontend/node_modules" ]; then
     echo "📦 Installing frontend dependencies..."
-    cd frontend && npm install && cd ..
+    cd frontend && bun install && cd ..
 fi
 
 # Create .env files if they don't exist
@@ -55,8 +55,8 @@ echo ""
 echo "✅ Setup complete!"
 echo ""
 echo "To start the application:"
-echo "1. Backend: cd backend && npm run start:dev"
-echo "2. Frontend: cd frontend && npm run dev"
+echo "1. Backend: cd backend && bun run start:dev"
+echo "2. Frontend: cd frontend && bun run dev"
 echo ""
 echo "Then open http://localhost:5173 in your browser"
 echo ""
