@@ -18,7 +18,7 @@ import { RadioModule } from './radio/radio.module';
       load: [databaseConfig, redisConfig, podcastConfig, radioConfig],
     }),
 
-    // Database connection (PostgreSQL)
+    // Database connection (PostgreSQL) — single root connection, migrations enabled
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => {
@@ -31,7 +31,12 @@ import { RadioModule } from './radio/radio.module';
             url,
             ssl,
             entities: configService.get('database.entities'),
-            synchronize: configService.get('database.synchronize'),
+            // Disable synchronize - use migrations
+            synchronize: false,
+            // Run migrations on startup in development only (controlled in config)
+            migrations: configService.get('database.migrations'),
+            migrationsRun: configService.get('database.migrationsRun'),
+            migrationsTableName: configService.get('database.migrationsTableName') || 'migrations',
             logging: configService.get('database.logging'),
             retryAttempts: configService.get('database.retryAttempts') || 5,
             retryDelay: configService.get('database.retryDelay') || 3000,
@@ -45,7 +50,11 @@ import { RadioModule } from './radio/radio.module';
           password: configService.get('database.password'),
           database: configService.get('database.database'),
           entities: configService.get('database.entities'),
-          synchronize: configService.get('database.synchronize'),
+          // Disable synchronize - use migrations
+          synchronize: false,
+          migrations: configService.get('database.migrations'),
+          migrationsRun: configService.get('database.migrationsRun'),
+          migrationsTableName: configService.get('database.migrationsTableName') || 'migrations',
           logging: configService.get('database.logging'),
           retryAttempts: configService.get('database.retryAttempts') || 5,
           retryDelay: configService.get('database.retryDelay') || 3000,

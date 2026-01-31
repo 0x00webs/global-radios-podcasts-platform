@@ -5,13 +5,19 @@
   "description": "Backend API for Global Radio & Podcast Platform",
   "main": "dist/main.js",
   "scripts": {
-    "build": "tsc",
-    "start": "node dist/main.js",
+    "build": "bunx --bun nest build",
+    "start": "bun dist/main.js",
     "dev": "nodemon --watch src --exec ts-node src/main.ts",
+    "migrate:run": "bun run --bun run-migrations.ts",
+    "migration:generate": "bunx typeorm migration:generate -d ./data-source.ts",
     "lint": "echo 'Linting not configured yet'",
     "test": "echo 'Tests not configured yet'"
   },
-  "keywords": ["radio", "podcast", "streaming"],
+  "keywords": [
+    "radio",
+    "podcast",
+    "streaming"
+  ],
   "author": "",
   "license": "MIT",
   "dependencies": {
